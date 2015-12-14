@@ -366,3 +366,23 @@ class TestFlashFormatter < FormatterTest
     assert_equal 'de-AT', @formatter.determine_language_given_path("locale/de-AT")
   end
 end
+
+class TestWindowsFormatter < FormatterTest
+  def setup
+    super Twine::Formatters::Windows
+  end
+
+  def test_read_file_format
+    @formatter.read_file fixture('formatter_windows.xml'), 'en'
+
+    1.upto(4) do |i|
+      assert_equal "value#{i}-english", @strings.strings_map["key#{i}"].translations['en']
+    end
+  end
+
+  def test_write_file_output_format
+    formatter = Twine::Formatters::Windows.new @twine_file
+    formatter.write_file @output_path, 'en'
+    assert_equal content('formatter_windows.xml'), output_content
+  end
+end
