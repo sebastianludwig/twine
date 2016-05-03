@@ -7,17 +7,23 @@ module Twine
     PLACEHOLDER_PARAMETER_FLAGS_WIDTH_PRECISION_LENGTH = '(\d+\$)?' + PLACEHOLDER_FLAGS_WIDTH_PRECISION_LENGTH
     PLACEHOLDER_TYPES = '[diufFeEgGxXoscpaA]'
 
-    def convert_twine_string_placeholder(input)
+    def convert_string_placeholder_from_twine_to_printf(input)
       # %@ -> %s
       input.gsub(/(%#{PLACEHOLDER_PARAMETER_FLAGS_WIDTH_PRECISION_LENGTH})@/, '\1s')
+    end
+
+    def convert_string_placeholder_from_printf_to_twine(input)
+      placeholder_regex = /(%#{PLACEHOLDER_PARAMETER_FLAGS_WIDTH_PRECISION_LENGTH})s/
+
+      # %s -> %@
+      input.gsub(placeholder_regex, '\1@')
     end
 
     # http://developer.android.com/guide/topics/resources/string-resource.html#FormattingAndStyling
     # http://stackoverflow.com/questions/4414389/android-xml-percent-symbol
     # https://github.com/mobiata/twine/pull/106
     def convert_placeholders_from_twine_to_android(input)
-      # %@ -> %s
-      value = convert_twine_string_placeholder(input)
+      value = convert_string_placeholder_from_twine_to_printf input
 
       placeholder_syntax = PLACEHOLDER_PARAMETER_FLAGS_WIDTH_PRECISION_LENGTH + PLACEHOLDER_TYPES
       placeholder_regex = /%#{placeholder_syntax}/
@@ -50,16 +56,13 @@ module Twine
     end
 
     def convert_placeholders_from_android_to_twine(input)
-      placeholder_regex = /(%#{PLACEHOLDER_PARAMETER_FLAGS_WIDTH_PRECISION_LENGTH})s/
-
-      # %s -> %@
-      input.gsub(placeholder_regex, '\1@')
+      convert_string_placeholder_from_printf_to_twine input
     end
 
     # http://help.adobe.com/en_US/FlashPlatform/reference/actionscript/3/mx/resources/IResourceManager.html#getString()
     # http://soenkerohde.com/2008/07/flex-localization/comment-page-1/
     def convert_placeholders_from_twine_to_flash(input)
-      value = convert_twine_string_placeholder(input)
+      value = convert_string_placeholder_from_twine_to_printf(input)
 
       placeholder_regex = /%#{PLACEHOLDER_PARAMETER_FLAGS_WIDTH_PRECISION_LENGTH}#{PLACEHOLDER_TYPES}/
       value.gsub(placeholder_regex).each_with_index do |match, index|

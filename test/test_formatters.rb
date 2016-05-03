@@ -370,19 +370,57 @@ end
 class TestWindowsFormatter < FormatterTest
   def setup
     super Twine::Formatters::Windows
+    @escape_test_values = {
+      'this & that'       => 'this &amp; that',
+      'this < that'       => 'this &lt; that',
+      "it's complicated"  => "it&#39;s complicated",
+      'a "good" way'      => 'a &quot;good&quot; way',
+    }
+  end
+
+  def test_can_handle_directory
+    strings = File.join @output_dir, 'strings'
+    FileUtils.mkdir_p File.join(strings, KNOWN_LANGUAGES.sample)
+    assert @formatter.can_handle_directory?(strings)
+  end
+
+  def test_determine_language_given_path
+    lang = KNOWN_LANGUAGES.sample
+    path = File.join @output_dir, 'strings', lang
+    assert_equal lang, @formatter.determine_language_given_path(path)
   end
 
   def test_read_file_format
-    @formatter.read_file fixture('formatter_windows.xml'), 'en'
+    @formatter.read_file content_io('formatter_windows.xml'), 'en'
 
-    1.upto(4) do |i|
-      assert_equal "value#{i}-english", @strings.strings_map["key#{i}"].translations['en']
+    assert_file_contents_read_correctly
+  end
+
+  def test_set_translation_unescaping
+    @escape_test_values.each do |expected, input|
+      @formatter.set_translation_for_key 'key1', 'en', input
+      assert_equal expected, @empty_twine_file.definitions_by_key['key1'].translations['en']
     end
   end
 
+  def test_set_translation_converts_string_placeholders
+    @formatter.set_translation_for_key 'key1', 'en', "value %s"
+    assert_equal 'value %@', @empty_twine_file.definitions_by_key['key1'].translations['en']
+  end
+
   def test_write_file_output_format
-    formatter = Twine::Formatters::Windows.new @twine_file
-    formatter.write_file @output_path, 'en'
-    assert_equal content('formatter_windows.xml'), output_content
+    formatter = Twine::Formatters::Windows.new
+    formatter.twine_file = @twine_file
+    assert_equal content('formatter_windows.xml'), formatter.format_file('en')
+  end
+
+  def test_format_value_escapes_html_entities
+    @escape_test_values.each do |input, expected|
+      assert_equal expected, @formatter.format_value(input)
+    end
+  end
+
+  def test_format_value_converts_string_placeholders
+    assert_equal 'value %s', @formatter.format_value('value %@')
   end
 end
